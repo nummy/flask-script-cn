@@ -100,4 +100,78 @@ python manage.py hello
 manager.run({'hello' : Hello()})
 ```
 
+Command类必须定义一个`run()`方法，方法中的位置参数以及可选参数来由命令行中输入的参数来决定。
+
+使用下面的命令获取可用命令以及详细说明：
+
+```Python
+python manage.py
+```
+
+使用下面的命令获取指定命令的帮助信息：
+
+```Python
+python manage.py runserver -？
+```
+
+上面的代码会输出`runserver`命令的用法以及Command类中的文档注释。
+
+
+这种方法比较灵活，但是也很冗长，对于简单的命令，我们可以使用@command修饰器：
+
+##### 方法2
+
+```Python
+@manager.command
+def hello():
+    "Just say hello"
+    print "hello"
+```
+
+这种方法得到的结果与方法一的结果一致:
+```Python
+python manage.py hello
+> hello
+```
+
+一样的，使用下面的命令获取帮助：
+```Python
+python manage.py -?
+> Just say hello
+```
+
+##### 方法3
+
+最后，使用@option修饰器，如果想对命令进行更加复杂的控制，可以使用这种方法：
+```Python
+@manager.option('-n', '--name', help='Your name')
+def hello(name):
+    print "hello", name
+```
+
+在后面，我们会详细讲解@option的用法。
+
+帮助信息可以通过`--help`或者`-h`实现查询，但是预期的结果可能不太理想，因为`-h`也可以用作`--host`的简写，导致Flask无法进行区分。
+
+如果你想恢复`-h`的原始用法，可以给manager对象的	`help_args`设置你想用的参数，例如：
+```Python
+manager = Manager()
+manager.help_args = ('-h','-?','--help')
+```
+
+可以在`sub-command`或者`manager`中重写列表：
+```Python
+def talker(host='localhost'):
+    pass
+ccmd = ConnectCmd(talker)
+ccmd.help_args = ('-?','--help')
+manager.add_command("connect", ccmd)
+manager.run()
+```
+
+这样的话，`manager -h` 将输出帮助信息，而`manager connect -h www.example.com ` 将连接远程主机。
+
+### 给命令添加参数
+
+
 
