@@ -173,5 +173,60 @@ manager.run()
 
 ### 给命令添加参数
 
+大多数命令都可以接收可选参数。以上面的hello命令为例，我们可以给它增加一个输出名字的功能：
+```Python
+python manage.py hello --name=Joe
+hello Joe
+```
+
+或者：
+```Python
+python manage.py hello -n Joe
+```
+
+为了实现这个功能，可以使用Command类的option_list属性：
+```Python
+from flask.ext.script import Command, Manager, Option
+
+class Hello(Command):
+
+    option_list = (
+        Option('--name', '-n', dest='name'),
+    )
+
+    def run(self, name):
+        print "hello %s" % name
+```
+
+可选参数保存在Option中。
+
+或者，可以在Command类中定义一个get_option()方法：
+```Python
+class Hello(Command):
+
+    def __init__(self, default_name='Joe'):
+        self.default_name=default_name
+
+    def get_options(self):
+        return [
+            Option('-n', '--name', dest='name', default=self.default_name),
+        ]
+
+    def run(self, name):
+        print "hello",  name
+```
+
+如果你使用@command修饰器，那就更简单了，options参数可以从函数参数中自动提取出来。
+```Python
+@manager.command
+def hello(name):
+    print "hello", name
+```
+
+然后这样调用命令：
+```Python
+> python manage.py hello Joe
+hello Joe
+```
 
 
