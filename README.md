@@ -97,6 +97,7 @@ python manage.py hello
 
 也可以直接将`Command`对象传递给`manager.run()`：
 ```Python
-python manage.py hello
-> hello world
+manager.run({'hello' : Hello()})
 ```
+
+
