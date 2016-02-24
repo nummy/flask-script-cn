@@ -366,4 +366,114 @@ hello FRANK, get a COOKIE!
 
 ### 获取用户输入
 
+Flask-Script提供了很多方法来帮助用户从命令行中获取输入信息，例如：
+```Python
+from flask.ext.script import Manager, prompt_bool
+
+from myapp import app
+from myapp.models import db
+
+manager = Manager(app)
+
+@manager.command
+def dropdb():
+    if prompt_bool(
+        "Are you sure you want to lose all your data"):
+        db.drop_all()
+```
+
+调用方式如下：
+```Python
+> python manage.py dropdb
+Are you sure you want to lose all your data ? [N]
+```
+
+### 默认命令
+
+** runserver **
+
+Flask-Script自身提供了很多定义好的命令，例如`Server`和`Shell`。
+`Server`命令用于运行Flask应用服务器：
+```Python
+from flask.ext.script import Server, Manager
+from myapp import create_app
+
+manager = Manager(create_app)
+manager.add_command("runserver", Server())
+
+if __name__ == "__main__":
+    manager.run()
+```
+
+调用方式如下：
+```Python
+python manage.py runserver
+```
+
+`Server`命令有许多参数，可以通过`python manager.py runserver -?`来获取详细帮助信息，也可以在构造函数中重定义默认值：
+```Python
+server = Server(host="0.0.0.0", port=9000)
+```
+
+大多数情况下，`runserver`命令用于开启调试模型运行服务器，以便查找bug，因此，如果没有在配置文件中特别声明的话，`runserver`默认是开启调试模式的，当修改代码的时候，会自动重载服务器。
+
+**shell**
+
+`Shell`命令用于打开一个Python终端，你可以给它传递一个`make_context`参数，这个参数必须是一个可调用对象，并且返回一个字典。
+```Python
+from flask.ext.script import Shell, Manager
+
+from myapp import app
+from myapp import models
+from myapp.models import db
+
+def _make_context():
+    return dict(app=app, db=db, models=models)
+
+manager = Manager(create_app)
+manager.add_command("shell", Shell(make_context=_make_context))
+```
+
+这个命令非常有帮助，尤其是当你需要从shell中引入很多模块的时候，它可以节省很多时间。
+
+`Shell`命令默认使用IPython，如果已经安装了的话，否则使用默认的Python终端，当然那你也可以禁用这个功能，给`Shell`构造函数传递`use_ipython`参数，或者在命令中使用`--no-ipython`。
+
+```Python
+shell = Shell(use_ipython=False)
+```
+
+还可以使用`@manager.shell`修饰器:
+```Python
+@manager.shell
+def make_shell_context():
+    return dict(app=app, db=db, models=models)
+```
+
+调用方式跟默认的一样：
+```Python
+> python manage.py shell
+```
+
+`shell`命令以及`runserver`命令默认被加载，如果你想要覆盖这些命令，可以使用`add_command（）`或者修饰器，如果你传递`with_default_commands=Flase`给Manager构造函数，这些命令就不会加载了。
+
+```Python
+manager = Manager(app, with_default_commands=False)
+```
+
+### Sub-Managers
+
+Sub-Manager是Manager的实例对象，它用于给另外一个Manager添加命令。
+
+```Python
+def sub_opts(app, **kwargs):
+    pass
+sub_manager = Manager(sub_opts)
+
+manager = Manager(self.app)
+manager.add_command("sub_manager", sub_manager)
+```
+
+如果给`sub_manager`添加参数，`sub_opts`会接收响应参数值。应用通过app传递给`sub_manager`。
+
+
 
