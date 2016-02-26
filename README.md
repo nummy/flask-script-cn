@@ -583,8 +583,4 @@ except InvalidCommand as err:
 
 `Manager`运行在`Flask test context`上下文环境中，也就是说你可以访问本地请求代理，如`current_app`。
 
-### API
-
-
-
 
