@@ -473,7 +473,118 @@ manager = Manager(self.app)
 manager.add_command("sub_manager", sub_manager)
 ```
 
-如果给`sub_manager`添加参数，`sub_opts`会接收响应参数值。应用通过app传递给`sub_manager`。
+如果给`sub_manager`添加选项，`sub_opts`会接收相应选项值。应用通过app传递给`sub_manager`。
+
+如果`sub_opts`返回值非空，那么这个值会覆盖app传递的值，这样你就可以创建一个sub-manager来替换整个应用。其一个用途就是创建一个独立的管理应用，如下所示：
+```Python
+def gen_admin(app, **kwargs):
+    from myweb.admin import MyAdminApp
+    ## easiest but possibly incomplete way to copy your settings
+    return MyAdminApp(config=app.config, **kwargs)
+sub_manager = Manager(gen_admin)
+
+manager = Manager(MyApp)
+manager.add_command("admin", sub_manager)
+
+> python manage.py runserver
+[ starts your normal server ]
+> python manage.py admin runserver
+[ starts an administrative server ]
+```
+
+### 扩展开发
+
+使用sub-manager可以很方便的创建扩展，下面是创建一个数据库扩展的例子:
+```Python
+manager = Manager(usage="Perform database operations")
+
+@manager.command
+def drop():
+    "Drops database tables"
+    if prompt_bool("Are you sure you want to lose all your data"):
+        db.drop_all()
+
+
+@manager.command
+def create(default_data=True, sample_data=False):
+    "Creates database tables from sqlalchemy models"
+    db.create_all()
+    populate(default_data, sample_data)
+
+
+@manager.command
+def recreate(default_data=True, sample_data=False):
+    "Recreates database tables (same as issuing 'drop' and then 'create')"
+    drop()
+    create(default_data, sample_data)
+
+
+@manager.command
+def populate(default_data=False, sample_data=False):
+    "Populate database with default data"
+    from fixtures import dbfixture
+
+    if default_data:
+        from fixtures.default_data import all
+        default_data = dbfixture.data(*all)
+        default_data.setup()
+
+    if sample_data:
+        from fixtures.sample_data import all
+        sample_data = dbfixture.data(*all)
+        sample_data.setup()
+```
+然后用户就可以将sub-manager注册到Manager上。
+```Python
+manager = Manager(app)
+
+from flask.ext.database import manager as database_manager
+manager.add_command("database", database_manager)
+```
+
+调用方式如下：
+```Python
+> python manage.py database
+
+ Please provide a command:
+
+ Perform database operations
+  create    Creates database tables from sqlalchemy models
+  drop      Drops database tables
+  populate  Populate database with default data
+  recreate  Recreates database tables (same as issuing 'drop' and then 'create')
+```
+
+### 异常处理
+
+虽然用户不希望看到异常信息，但是开发者希望可以-看到以便调试。因此，`flask.ext.script.commands`提供了一个异常类`InvalidCommand`来输出异常信息。
+
+命令处理函数：
+```Python
+from flask.ext.script.commands import InvalidCommand
+
+[… if some command verification fails …]
+class MyCommand(Command):
+    def run(self, foo=None,bar=None):
+        if foo and bar:
+                raise InvalidCommand("Options foo and bar are incompatible")
+```
+
+在主循环中：
+```Python
+try:
+    MyManager().run()
+except InvalidCommand as err:
+    print(err, file=sys.stderr)
+    sys.exit(1)
+```
+
+### 访问本地代理
+
+`Manager`运行在`Flask test context`上下文环境中，也就是说你可以访问本地请求代理，如`current_app`。
+
+### API
+
 
 
 
